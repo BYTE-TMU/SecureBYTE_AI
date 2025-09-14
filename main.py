@@ -9,6 +9,7 @@ import time
 import json
 from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
+from importlib import import_module
 
 # Import configuration
 from .config import (
@@ -16,16 +17,9 @@ from .config import (
     REQUEST_TIMEOUT, MAX_RETRIES, ENABLE_STREAMING
 )
 
-# Import providers
-from .providers.openai_provider import OpenAIProvider
-from .providers.anthropic_provider import AnthropicProvider
-from .providers.google_provider import GoogleProvider
-from .providers.cohere_provider import CohereProvider
-from .providers.mistral_provider import MistralProvider
-from .providers.groq_provider import GroqProvider
-from .providers.together_provider import TogetherProvider
-from .providers.replicate_provider import ReplicateProvider
-from .providers.huggingface_provider import HuggingFaceProvider
+# NOTE: Providers are lazily imported to avoid requiring all optional
+# dependencies at import time. This allows using OpenAI without having to
+# install packages for Anthropic, Google, etc.
 
 class LLMManager:
     """Main class for managing multiple LLM providers"""
@@ -34,16 +28,17 @@ class LLMManager:
         load_dotenv()
         
         self.current_provider = provider or CURRENT_PROVIDER
+        # Map provider keys to their provider class import path
         self.providers = {
-            "openai": OpenAIProvider,
-            "anthropic": AnthropicProvider,
-            "google": GoogleProvider,
-            "cohere": CohereProvider,
-            "mistral": MistralProvider,
-            "groq": GroqProvider,
-            "together": TogetherProvider,
-            "replicate": ReplicateProvider,
-            "huggingface": HuggingFaceProvider,
+            "openai": "SecureBYTE_AI.providers.openai_provider.OpenAIProvider",
+            "anthropic": "SecureBYTE_AI.providers.anthropic_provider.AnthropicProvider",
+            "google": "SecureBYTE_AI.providers.google_provider.GoogleProvider",
+            "cohere": "SecureBYTE_AI.providers.cohere_provider.CohereProvider",
+            "mistral": "SecureBYTE_AI.providers.mistral_provider.MistralProvider",
+            "groq": "SecureBYTE_AI.providers.groq_provider.GroqProvider",
+            "together": "SecureBYTE_AI.providers.together_provider.TogetherProvider",
+            "replicate": "SecureBYTE_AI.providers.replicate_provider.ReplicateProvider",
+            "huggingface": "SecureBYTE_AI.providers.huggingface_provider.HuggingFaceProvider",
         }
         
         self.provider_instance = None
@@ -55,9 +50,16 @@ class LLMManager:
             raise ValueError(f"Provider '{self.current_provider}' not supported")
         
         try:
-            self.provider_instance = self.providers[self.current_provider]()
+            provider_class = self._load_provider_class(self.providers[self.current_provider])
+            self.provider_instance = provider_class()
         except Exception as e:
             raise RuntimeError(f"Failed to initialize {self.current_provider}: {str(e)}")
+    
+    def _load_provider_class(self, dotted_path: str):
+        """Dynamically import a class from a dotted module path."""
+        module_path, class_name = dotted_path.rsplit('.', 1)
+        module = import_module(module_path)
+        return getattr(module, class_name)
     
     def switch_provider(self, provider: str):
         """Switch to a different provider"""

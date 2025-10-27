@@ -226,6 +226,24 @@ MODELS = {
     },
 }
 
+# DISPLAY LLM NAME
+# =============================================================================
+# Displays the LLM Provider that is currently in use.
+#  The LLM Provider can be change in line 26
+
+def display_current_llm():
+    """
+    Returns a user-friendly string showing the current provider and model.
+    Example: "Current LLM: OpenAI - gpt-4.1-nano"
+    """
+    from config import CURRENT_PROVIDER, MODELS
+    import os
+
+    provider = CURRENT_PROVIDER
+    model_name = MODELS.get(provider, {}).get("model", "unknown")
+
+    return f"Current LLM: {provider.capitalize()} - {model_name}"
+
 # =============================================================================
 # VALIDATION AND HELPER FUNCTIONS
 # =============================================================================

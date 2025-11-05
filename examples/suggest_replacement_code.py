@@ -1,6 +1,7 @@
 import os
 import sys
 from dotenv import load_dotenv
+from examples.preclean_script import preclean_code
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from main import LLMManager
@@ -8,6 +9,8 @@ from main import LLMManager
 def suggest_replacement_code(bad_code: str) -> str:
     """Takes a code snippet and returns a suggested replacement version."""
     llm = LLMManager()
+
+    bad_code = preclean_code(bad_code)
 
     prompt = f"""
 

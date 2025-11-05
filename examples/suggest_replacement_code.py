@@ -1,7 +1,7 @@
 import os
 import sys
 from dotenv import load_dotenv
-from examples.preclean_script import preclean_code
+from preclean_script import preclean_code
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from main import LLMManager

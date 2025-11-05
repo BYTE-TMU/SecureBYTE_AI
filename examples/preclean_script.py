@@ -1,37 +1,20 @@
 import ast
-import astunparse
 
-def clean_code_input(source_code: str) -> str:
+def preclean_code(source_code: str) -> str:
     """
-    Cleans up Python source code by removing comments, docstrings, and unnecessary whitespace.
-    Returns the cleaned version of the code.
+    Remove comments and docstrings from Python code.
+    Returns the cleaned code as a string.
     """
-    try:
-        tree = ast.parse(source_code)
+    tree = ast.parse(source_code)
 
-        cleaned_code = astunparse.unparse(tree)
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef, ast.Module)):
+            if node.body and isinstance(node.body[0], ast.Expr):
+                expr = node.body[0]
+                # Remove docstring if first expression is a string literal
+                if isinstance(expr.value, ast.Constant) and isinstance(expr.value.value, str):
+                    node.body.pop(0)
 
-        cleaned_code = "\n".join(line.rstrip() for line in cleaned_code.splitlines() if line.strip())
-
-        return cleaned_code.strip()
-    except Exception as e:
-        print(f"⚠️ Error while cleaning code: {e}")
-        return source_code
-
-
-if __name__ == "__main__":
-    print("🧹 Pre-Clean Code Tool")
-    print("Paste your Python code below. Type 'END' on a new line when done.\n")
-
-    lines = []
-    while True:
-        line = input()
-        if line.strip().upper() == "END":
-            break
-        lines.append(line)
-
-    original_code = "\n".join(lines)
-    cleaned = clean_code_input(original_code)
-
-    print("\n✅ Cleaned Code:\n")
-    print(cleaned)
+    # Convert AST back to code
+    cleaned_code = ast.unparse(tree)
+    return cleaned_code

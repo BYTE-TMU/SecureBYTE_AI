@@ -1,13 +1,16 @@
+# task #17
+
 import os
 import sys
 from dotenv import load_dotenv
 from preclean_script import preclean_code
+from custom_rules import run_vulnerability_checks, DEFAULT_RULES
+
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from main import LLMManager
 
 def suggest_replacement_code(bad_code: str) -> str:
-    """Takes a code snippet and returns a suggested replacement version."""
     llm = LLMManager()
 
     bad_code = preclean_code(bad_code)
@@ -48,6 +51,16 @@ def main():
             continue
         
         bad_code = "\n".join(lines)
+
+        warnings = run_vulnerability_checks(bad_code, DEFAULT_RULES)
+        if warnings:
+            print("\n⚠️ Warnings detected in your code:")
+            for w in warnings:
+                print(w)
+            print("\n🚫 Skipping improvement due to detected vulnerabilities.\n")
+            print("=" * 60)
+            continue
+
         print("\n💡 Suggested Replacement:\n")
         improved = suggest_replacement_code(bad_code)
         print(improved)

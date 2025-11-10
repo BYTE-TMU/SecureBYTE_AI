@@ -31,7 +31,6 @@ def run_hardcoded_checks(code: str, rules: List[dict]) -> List[Tuple[str, str]]:
     warnings = []
     for rule in rules:
         if re.search(rule["pattern"], code):
-            # Mark critical for dangerous functions, else low severity
             severity = "critical" if rule["name"].lower() in ["no eval", "no exec"] else "warning"
             warnings.append((severity, f"{rule['name']}: {rule['message']}"))
     return warnings
@@ -42,7 +41,6 @@ def run_vulnerability_checks(code: str, rules: List[dict] = DEFAULT_RULES) -> Li
     
     ai_safe, ai_message = run_ai_safety_check(code)
     if not ai_safe:
-        # If the AI mentions dangerous keywords, mark as critical
         critical_keywords = ["system", "delete", "shutdown", "exec", "eval", "dangerous"]
         severity = "critical" if any(word in ai_message.lower() for word in critical_keywords) else "warning"
         warnings.append((severity, f"AI Check: {ai_message}"))

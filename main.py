@@ -11,21 +11,21 @@ from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
 
 # Import configuration
-from .config import (
+from config import (
     CURRENT_PROVIDER, MODELS, SYSTEM_PROMPT, DEFAULT_USER_PROMPT,
     REQUEST_TIMEOUT, MAX_RETRIES, ENABLE_STREAMING
 )
 
 # Import providers
-from .providers.openai_provider import OpenAIProvider
-from .providers.anthropic_provider import AnthropicProvider
-from .providers.google_provider import GoogleProvider
-from .providers.cohere_provider import CohereProvider
-from .providers.mistral_provider import MistralProvider
-from .providers.groq_provider import GroqProvider
-from .providers.together_provider import TogetherProvider
-from .providers.replicate_provider import ReplicateProvider
-from .providers.huggingface_provider import HuggingFaceProvider
+from providers.openai_provider import OpenAIProvider
+from providers.anthropic_provider import AnthropicProvider
+from providers.google_provider import GoogleProvider
+from providers.cohere_provider import CohereProvider
+from providers.mistral_provider import MistralProvider
+from providers.groq_provider import GroqProvider
+from providers.together_provider import TogetherProvider
+from providers.replicate_provider import ReplicateProvider
+from providers.huggingface_provider import HuggingFaceProvider
 
 class LLMManager:
     """Main class for managing multiple LLM providers"""
@@ -345,7 +345,7 @@ def main():
     
     llm = LLMManager()
     
-    test_prompt = "Hello! Tell me an interesting fact about space in 2 sentences."
+    test_prompt = "Hello! Tell me an interesting fact about space in 2 sentences. In JSON format."
     
     print(f"Provider: {llm.current_provider}")
     print(f"Model: {llm.get_model_config().get('model', 'unknown')}")

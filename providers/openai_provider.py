@@ -30,6 +30,7 @@ Default Parameters:
 import os
 from openai import OpenAI
 from typing import Dict, Any, Optional
+import json
 
 class OpenAIProvider:
     def __init__(self):
@@ -55,7 +56,15 @@ class OpenAIProvider:
                 presence_penalty=model_config.get("presence_penalty", 0.0),
                 response_format={"type": "json_object"} if response_format == "json_object" else None
             )
-            return response.choices[0].message.content
+            content = response.choices[0].message.content
+            try: 
+                parsed = json.loads(content)
+                with open("model_output.json", "w", encoding="utf-8") as f:
+                    json.dump(parsed, f, indent=4)
+            except json.JSONDecodeError:
+                print("Model output not a valid JSON, skipping save")
+            return content
+        
         except Exception as e:
             return f"Error with OpenAI: {str(e)}"
     

@@ -9,6 +9,7 @@ import time
 import json
 from typing import Dict, Any, Optional, List
 from dotenv import load_dotenv
+from examples.logger import log_request
 
 # Import configuration
 from config import (
@@ -69,23 +70,53 @@ class LLMManager:
         print(f"✅ Switched to {provider}")
     
     def get_model_config(self, provider: Optional[str] = None) -> Dict[str, Any]:
-        """Get model configuration for the current or specified provider"""
         provider = provider or self.current_provider
         return MODELS.get(provider, {})
     
     def generate_response(self, 
-                         user_prompt: str = DEFAULT_USER_PROMPT,
-                         system_prompt: str = SYSTEM_PROMPT,
-                         custom_config: Optional[Dict[str, Any]] = None) -> str:
-        """Generate a response using the current provider"""
-        
+                     user_prompt: str = DEFAULT_USER_PROMPT,
+                     system_prompt: str = SYSTEM_PROMPT,
+                     custom_config: Optional[Dict[str, Any]] = None) -> str:
+    
         config = self.get_model_config()
         if custom_config:
             config.update(custom_config)
         
-        return self.provider_instance.generate_response(
-            system_prompt, user_prompt, config
-        )
+        start_time = time.time()
+        try:
+            response = self.provider_instance.generate_response(
+                system_prompt, user_prompt, config
+            )
+            end_time = time.time()
+
+            estimated_cost = None  
+
+            log_request(
+                provider=self.current_provider,
+                prompt=user_prompt,
+                response=response,
+                start_time=start_time,
+                end_time=end_time,
+                cost=estimated_cost,
+                status="success"
+            )
+
+            return response
+
+        except Exception as e:
+            end_time = time.time()
+
+            log_request(
+                provider=self.current_provider,
+                prompt=user_prompt,
+                response=str(e),
+                start_time=start_time,
+                end_time=end_time,
+                cost=None,
+                status="error"
+            )
+
+            raise
     
     def stream_response(self, 
                        user_prompt: str = DEFAULT_USER_PROMPT,

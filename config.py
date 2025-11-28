@@ -13,6 +13,8 @@ Available providers: openai, anthropic, google, cohere, mistral, groq, together,
 """
 
 import os
+import math
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -297,3 +299,139 @@ if __name__ == "__main__":
     print(f"Provider: {CURRENT_PROVIDER}")
     print(f"Model: {get_current_config().get('model')}")
     print(f"API Key Available: {validate_api_key(CURRENT_PROVIDER)}")
+
+
+
+# =============================================================================
+# COST REPORTING (From User Submitted File/Hard Code for testing) 
+# For file use: calculate_cost_from_file(path, provider=None, model=None)
+# For text use: calculate_cost(input_text, output_text="", provider=None, model=None)
+# =============================================================================
+
+# Turn cost reporting on/off
+ENABLE_COST_REPORT = True
+
+COST_REPORT_OUTPUT_DIR = "cost_reports"
+
+# To track cost per 1K tokens for each provider/model
+COST_PER_1K_TOKENS = {
+    "openai": {
+        "gpt-4.1-nano": 0.0005,
+        "gpt-4o": 0.03,
+        "gpt-4-turbo": 0.015,
+        "gpt-4": 0.06,
+        "gpt-3.5-turbo": 0.002,
+        "gpt-4-vision-preview": 0.04,
+        "gpt-4-32k": 0.12,
+    },
+    "anthropic": {
+        "claude-3-opus-20240229": 0.09,
+        "claude-3-sonnet-20240229": 0.06,
+        "claude-3-haiku-20240307": 0.03,
+        "claude-2.1": 0.045,
+        "claude-2.0": 0.03,
+        "claude-instant-1.2": 0.015,
+    },
+    "google": {
+        "gemini-1.5-pro-latest": 0.05,
+        "gemini-1.5-flash-latest": 0.03,
+        "gemini-pro": 0.04,
+        "gemini-1.0-pro": 0.025,
+    },
+    "cohere": {
+        "command": 0.02,
+        "command-r": 0.03,
+    },
+    "mistral": {
+        "mistral-large-latest": 0.04,
+        "mistral-medium-latest": 0.025,
+        "mistral-small-latest": 0.015,
+    },
+    "groq": {
+        "mixtral-8x7b-32768": 0.03,
+        "llama2-70b-4096": 0.05,
+    },
+    "together": {
+        "meta-llama/Llama-2-70b-chat-hf": 0.04,
+        "mistralai/Mixtral-8x7B-Instruct-v0.1": 0.03,
+    },
+    "replicate": {
+        "meta/llama-2-70b-chat": 0.04,
+        "mistralai/mixtral-8x7b-instruct-v0.03": 0.03,
+    }
+}
+
+DEFAULT_CHARS_PER_TOKEN = 4  # Approximate
+
+# 2 Options for token estimating - hard coded for testing purposes or from file
+def estimate_tokens_from_text(text, chars_per_token=DEFAULT_CHARS_PER_TOKEN):
+    if not text:
+        return 0
+    return int(math.ceil(len(text) / float(chars_per_token)))
+
+
+def estimate_tokens_from_file(path, chars_per_token=DEFAULT_CHARS_PER_TOKEN):
+    p = Path(path)
+    try:
+        raw_bytes = p.read_bytes()
+        text = raw_bytes.decode("utf-8", errors="replace")
+    except Exception:
+        text = ""
+    return estimate_tokens_from_text(text, chars_per_token)
+
+
+def calculate_cost(input_text, output_text="", provider=None, model=None):
+    provider = provider or CURRENT_PROVIDER
+    model = model or MODELS.get(provider, {}).get("model", "unknown")
+
+    input_tokens = estimate_tokens_from_text(input_text)
+    output_tokens = estimate_tokens_from_text(output_text)
+    total_tokens = input_tokens + output_tokens
+
+    cost_per_1k = COST_PER_1K_TOKENS.get(provider, {}).get(model, 0.0)
+    cost_available = cost_per_1k > 0.0
+    estimated_cost = (total_tokens / 1000.0) * cost_per_1k if cost_available else 0.0
+
+    return {
+        "provider": provider,
+        "model": model,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": total_tokens,
+        "cost_per_1k": cost_per_1k,
+        "estimated_cost_usd": round(estimated_cost, 6),
+        "cost_available": cost_available,
+    }
+
+
+def calculate_cost_from_file(path, provider=None, model=None, chars_per_token=DEFAULT_CHARS_PER_TOKEN):
+    p = Path(path)
+    try:
+        raw_bytes = p.read_bytes()
+        text = raw_bytes.decode("utf-8", errors="replace")
+    except Exception:
+        text = ""
+
+    report = calculate_cost(text, "", provider=provider, model=model)
+    report["source_file"] = str(p.resolve())
+    return report
+
+
+def calculate_cost_auto(input_source, output_text="", provider=None, model=None):
+    """Calculate cost from either a text input or a file path."""
+    if isinstance(input_source, str) and os.path.isfile(input_source):
+        return calculate_cost_from_file(input_source, provider=provider, model=model)
+    return calculate_cost(input_source, output_text, provider=provider, model=model)
+
+
+def display_cost(input_text, output_text=""):
+    report = calculate_cost(input_text, output_text)
+    suffix = "" if report["cost_available"] else " (cost config not found)"
+    print(
+        f"💰 Input: {report['input_tokens']} | "
+        f"Output: {report['output_tokens']} | "
+        f"Total: {report['total_tokens']} | "
+        f"Cost: ${report['estimated_cost_usd']:.6f}{suffix}"
+    )
+
+    

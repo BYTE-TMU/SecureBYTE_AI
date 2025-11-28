@@ -236,8 +236,8 @@ def display_current_llm():
     Returns a user-friendly string showing the current provider and model.
     Example: "Current LLM: OpenAI - gpt-4.1-nano"
     """
-    from config import CURRENT_PROVIDER, MODELS
-    import os
+    # We are already inside config.py, so we can reference module‑level
+    # constants directly without re‑importing this module.
 
     provider = CURRENT_PROVIDER
     model_name = MODELS.get(provider, {}).get("model", "unknown")
